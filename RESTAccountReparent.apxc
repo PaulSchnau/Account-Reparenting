@@ -1,0 +1,44 @@
+@RestResource(urlMapping='/ReparentAccount/*')
+global with sharing class RESTAccountReparent {
+    
+    @HttpPost
+    global static String ReparentAccount(String Braintree_ID, String Name) {
+        
+        if (String.isBlank(Braintree_ID) || String.isBlank(Name)){
+            return 'Please provide Braintree_ID and Name';
+        }
+        
+        List<Account> braintreeAccounts = [SELECT Id FROM Account WHERE Braintree_ID__c = :Braintree_ID];
+        
+        if(braintreeAccounts.size() == 1){
+            List<Account> parentAccounts = [SELECT Id FROM Account WHERE Name = :Name AND Braintree_ID__c != :Braintree_ID AND ParentId = Null LIMIT 1];
+            if (parentAccounts.size() == 1){
+                Account childAccount = braintreeAccounts[0];
+                Account parentAccount = parentAccounts[0];
+                childAccount.ParentId = parentAccount.Id;
+                update childAccount;
+                return 'Succesfully reparented account';
+            }
+            else {
+                return 'No parent accounts with Name = ' + Name;
+            } 
+            
+            
+        } else {
+            List<Account> nameMatches = [Select Id from Account WHERE Name = :Name LIMIT 1];
+            if(nameMatches.size() == 1){
+                Account parentAccount = nameMatches[0];
+                Account newAccount = new Account();
+                newAccount.ParentId = parentAccount.Id;
+                newAccount.Name = Name;
+                insert newAccount; 
+                return 'Successfully created new child account';
+            } else {
+                Account newAccount = new Account();
+                newAccount.Name = Name;
+                insert newAccount;
+                return 'Successfully created new account';
+            }
+        }
+    }
+}
